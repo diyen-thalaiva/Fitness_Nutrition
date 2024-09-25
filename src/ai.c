@@ -1,5 +1,10 @@
-#include "ai.h"
+#include <ctype.h>
+#include <curl/curl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "ai.h"
 
 static const char *fitness_keywords[] = {
     "fitness",   "nutrition", "exercise", "workout",  "diet", "calories",
@@ -23,4 +28,27 @@ static int is_fitness_related(char *input) {
     }
   }
   return 0;
+}
+
+static void extract_response(char *json_response, char *output) {
+  char *start = strstr(json_response, "\"response\":");
+  if (start != NULL) {
+    start += strlen("\"response\":");
+
+    while (*start != '\"')
+      start++;
+    start++;
+
+    char *end = start;
+    while (*end != '\"' || (*(end - 1) == '\\' && *(end - 2) != '\\')) {
+      end++;
+    }
+
+    strncpy(output, start, end - start);
+    output[end - start] = '\0';
+
+    decode_escaped_characters(output);
+  } else {
+    strcpy(output, "No response found");
+  }
 }
