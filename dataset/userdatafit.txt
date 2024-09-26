@@ -1,0 +1,30 @@
+Name: Diyen Curpen
+Age: 21
+Gender: m
+Height: 176.00 meters
+Weight: 78.00 kg
+
+Name: Zakariyya Kurmally
+Age: 21
+Gender: m
+Height: 168.00 meters
+Weight: 68.00 kg
+
+Name: Lomesh Takoory
+Age: 21
+Gender: m
+Height: 179.00 meters
+Weight: 90.00 kg
+
+Name: Gehna Sookdawoor
+Age: 21
+Gender: F
+Height: 170.00 meters
+Weight: 55.00 kg
+
+Name: Rouksan Kherdali
+Age: 21
+Gender: f
+Height: 162.00 meters
+Weight: 70.00 kg
+
