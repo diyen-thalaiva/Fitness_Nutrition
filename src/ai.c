@@ -52,3 +52,90 @@ static void extract_response(char *json_response, char *output) {
     strcpy(output, "No response found");
   }
 }
+
+static size_t write_callback(void *ptr, size_t size, size_t nmemb,
+                             void *userdata) {
+  size_t total_size = size * nmemb;
+  strncat(userdata, (char *)ptr, total_size);
+  return total_size;
+}
+
+static void decode_escaped_characters(char *str) {
+  char *src = str;
+  char *dest = str;
+
+  while (*src) {
+    if (src[0] == '\\' && src[1] == 'n') {
+      *dest++ = '\n';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\"') {
+      *dest++ = '\"';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\\') {
+      *dest++ = '\\';
+      src += 2;
+    } else {
+      *dest++ = *src++;
+    }
+  }
+
+  *dest = '\0';
+}
+
+int prompt_user_ai() {
+  char input[500];
+
+  printf("Please enter a query: ");
+  fgets(input, sizeof(input), stdin);
+  input[strcspn(input, "\n")] = 0;
+
+  if (strcmp(input, "exit") == 0) {
+    printf("Exiting the program.\n");
+    return -1;
+  }
+
+  if (!is_fitness_related(input)) {
+    printf("Please ask questions related to fitness, nutrition, or physical "
+           "exercise.\n\n");
+    return 0;
+  }
+
+  CURL *curl;
+  CURLcode res;
+  char *url = "http://localhost:11434/api/generate";
+  char response[10000] = {0};
+  char extracted_response[10000] = {0};
+
+  char json_payload[500];
+  snprintf(json_payload, sizeof(json_payload),
+           "{\"model\": \"qwen2.5:0.5b\", \"prompt\": \"%s\", \"stream\": false}",
+           input);
+
+  curl = curl_easy_init();
+
+  if (curl) {
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+
+    res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK) {
+      fprintf(stderr, "curl_easy_perform() failed: %s\n",
+              curl_easy_strerror(res));
+    } else {
+      extract_response(response, extracted_response);
+      printf("Extracted Response:\n%s\n\n", extracted_response);
+    }
+
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+  }
+
+  return 0;
+}
