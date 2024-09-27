@@ -5,6 +5,50 @@
 
 #include "fitness.h"
 
+char *my_strcasestr(const char *haystack, const char *needle) {
+  if (!*needle) {
+    return (char *)haystack;
+  }
+
+  for (const char *p = haystack; *p != '\0'; p++) {
+    const char *h = p, *n = needle;
+    while (*h && *n &&
+           tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+      h++;
+      n++;
+    }
+    if (!*n) {
+      return (char *)p;
+    }
+  }
+
+  return NULL;
+}
+
+int find_exercise(const char *input, Exercise exercises[], int count,
+                  int matchIndexes[]) {
+  int matchCount = 0;
+  for (int i = 0; i < count; i++) {
+    if (my_strcasestr(exercises[i].name, input) != NULL) {
+      matchIndexes[matchCount] = i;
+      matchCount++;
+      if (matchCount >= MAX_MATCHES_FIT) {
+        break;
+      }
+    }
+  }
+  return matchCount;
+}
+
+void display_intensity_options(Exercise exercises[], int matchIndexes[],
+                               int matchCount) {
+  printf("Select an activity:\n");
+  for (int i = 0; i < matchCount; i++) {
+    printf("%d. %s\n", i + 1, exercises[matchIndexes[i]].name);
+  }
+}
+
+
 int load_exercises(const char *filename, Exercise exercises[]) {
   FILE *file = fopen(filename, "r");
   if (file == NULL) {
