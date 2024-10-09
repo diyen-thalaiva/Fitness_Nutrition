@@ -10,15 +10,36 @@
 #include "menu.h"
 #include "ai.h"
 
-static const char *fitness_keywords[] = {
-    "fitness",   "nutrition", "exercise", "workout",  "diet", "calories",
-    "protein",   "muscle",    "cardio",   "strength", "yoga", "hydration",
-    "endurance", "training",  "wellness", "recovery", "fat",  "health",
-    "gym",       "weight",    "lift"};
+// Curl write callback
+static size_t write_callback(void *ptr, size_t size, size_t nmemb,
+                             void *userdata) {
+  size_t total_size = size * nmemb;
+  strncat(userdata, (char *)ptr, total_size);
+  return total_size;
+}
 
-static int num_keywords =
-    sizeof(fitness_keywords) / sizeof(fitness_keywords[0]);
+// Decode escaped characters (like \n, \", etc.)
+static void decode_escaped_characters(char *str) {
+  char *src = str;
+  char *dest = str;
+  while (*src) {
+    if (src[0] == '\\' && src[1] == 'n') {
+      *dest++ = '\n';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\"') {
+      *dest++ = '\"';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\\') {
+      *dest++ = '\\';
+      src += 2;
+    } else {
+      *dest++ = *src++;
+    }
+  }
+  *dest = '\0';
+}
 
+// Check if the query is related to fitness
 static int is_fitness_related(char *input) {
   char lower_input[500];
   for (int i = 0; input[i]; i++) {
@@ -34,6 +55,7 @@ static int is_fitness_related(char *input) {
   return 0;
 }
 
+// Extract JSON response for display
 static void extract_response(char *json_response, char *output) {
   char *start = strstr(json_response, "\"response\":");
   if (start != NULL) {
@@ -57,114 +79,54 @@ static void extract_response(char *json_response, char *output) {
   }
 }
 
-static size_t write_callback(void *ptr, size_t size, size_t nmemb,
-                             void *userdata) {
-  size_t total_size = size * nmemb;
-  strncat(userdata, (char *)ptr, total_size);
-  return total_size;
+// Function to clear the entire response area in the window
+static void clear_response_area(WINDOW *win, int start_y, int height,
+                                int width) {
+  for (int i = 0; i < height; i++) {
+    mvwprintw(win, start_y + i, 2, "%-*s", width,
+              " "); // Clear the line with spaces
+  }
+  wrefresh(win); // Refresh window to reflect changes
 }
 
-static void decode_escaped_characters(char *str) {
-  char *src = str;
-  char *dest = str;
+// Function to display text with word-wrapping within a given width
+static void display_wrapped_text(WINDOW *win, int start_y, int start_x,
+                                 const char *text, int width, int height) {
+  int len = strlen(text);
+  int line_start = 0, line_count = 0;
 
-  while (*src) {
-    if (src[0] == '\\' && src[1] == 'n') {
-      *dest++ = '\n';
-      src += 2;
-    } else if (src[0] == '\\' && src[1] == '\"') {
-      *dest++ = '\"';
-      src += 2;
-    } else if (src[0] == '\\' && src[1] == '\\') {
-      *dest++ = '\\';
-      src += 2;
-    } else {
-      *dest++ = *src++;
+  for (int i = 0; i < len; i++) {
+    if (i - line_start >= width || text[i] == '\n') {
+      if (line_count < height) {
+        mvwprintw(win, start_y + line_count, start_x, "%.*s", i - line_start,
+                  text + line_start);
+      }
+      line_count++;
+      line_start = i;
+      if (text[i] == '\n') {
+        line_start++;
+      }
     }
   }
-
-  *dest = '\0';
+  if (line_start < len && line_count < height) {
+    mvwprintw(win, start_y + line_count, start_x, "%s", text + line_start);
+  }
 }
 
-int prompt_user_ai() {
-  char input[500];
-
-  printf("Please enter a query: ");
-  fgets(input, sizeof(input), stdin);
-  input[strcspn(input, "\n")] = 0;
-
-  if (strcmp(input, "exit") == 0) {
-    printf("Exiting the program.\n");
-    return -1;
-  }
-
-  if (!is_fitness_related(input)) {
-    printf("Please ask questions related to fitness, nutrition, or physical "
-           "exercise.\n\n");
-    return 0;
-  }
-
-  CURL *curl;
-  CURLcode res;
-  char *url = "http://localhost:11434/api/generate";
-  char response[10000] = {0};
-  char extracted_response[10000] = {0};
-
-  char json_payload[500];
-  snprintf(json_payload, sizeof(json_payload),
-           "{\"model\": \"qwen2.5:0.5b\", \"prompt\": \"%s\", \"stream\": false}",
-           input);
-
-  curl = curl_easy_init();
-
-  if (curl) {
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-
-    res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-      fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(res));
-    } else {
-      extract_response(response, extracted_response);
-      printf("Extracted Response:\n%s\n\n", extracted_response);
-    }
-
-    curl_easy_cleanup(curl);
-    curl_slist_free_all(headers);
-  }
-
-  return 0;
+// Function to display the current time in the window
+static void display_time(WINDOW *win, int height, int width) {
+  time_t rawtime;
+  struct tm *timeinfo;
+  char buffer[9];
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buffer, sizeof(buffer), "%H:%M:%S", timeinfo);
+  wattron(win, COLOR_PAIR(5));
+  mvwprintw(win, height + 2 + OFFSET_Y, width - 15, "TIME: %s",
+            buffer); // Time moved down closer to bottom-right
+  wattroff(win, COLOR_PAIR(5));
+  wrefresh(win);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Initialize the ncurses window and draw the layout
 static void drawWindow(WINDOW *win, char *output, char *prompt_input,
@@ -260,17 +222,6 @@ static void drawWindow(WINDOW *win, char *output, char *prompt_input,
 
   wrefresh(win); // Refresh window to reflect changes
 }
-
-
-
-
-
-
-
-
-
-
-
 
 // Handle input for fitness-related queries
 static int prompt_user(WINDOW *win, char *output, char *prompt_input) {
@@ -398,16 +349,6 @@ static int prompt_user(WINDOW *win, char *output, char *prompt_input) {
 
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
 
 int ai_draw_prompt() {
   char prompt_input[MAX_QUERY_LENGTH] = {0}; // Store the input from the user
