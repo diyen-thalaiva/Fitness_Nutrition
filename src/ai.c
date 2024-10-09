@@ -1,9 +1,13 @@
 #include <ctype.h>
 #include <curl/curl.h>
+#include <curses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h> // for sleep()
 
+#include "menu.h"
 #include "ai.h"
 
 static const char *fitness_keywords[] = {
@@ -136,6 +140,51 @@ int prompt_user_ai() {
     curl_easy_cleanup(curl);
     curl_slist_free_all(headers);
   }
+
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+int ai_draw_prompt() {
+  char prompt_input[MAX_QUERY_LENGTH] = {0}; // Store the input from the user
+  char output[MAX_OUTPUT_LENGTH] = {0};      // Store the output response
+
+  // Initialize ncurses
+  initscr();
+  start_color(); // Enable color functionality
+  cbreak();
+  noecho();
+  keypad(stdscr, TRUE);
+  curs_set(0); // Hide cursor
+
+  // Initialize colors
+  init_pair(1, COLOR_YELLOW, COLOR_BLACK); // Color for query
+  init_pair(2, COLOR_CYAN, COLOR_BLACK);   // Header color
+  init_pair(3, COLOR_GREEN, COLOR_BLACK);  // Color for response text
+  init_pair(4, COLOR_MAGENTA,
+            COLOR_BLACK); // Color for submit button and magenta line
+  init_pair(5, COLOR_RED, COLOR_BLACK); // Color for time
+  init_pair(6, COLOR_BLUE,
+            COLOR_BLACK); // Dark blue for horizontal lines and border
+
+  // Create the window and draw the initial layout
+  int width = 110, height = 30; // Increased window size
+  WINDOW *win = newwin(height, width, (LINES - height) / 2, (COLS - width) / 2);
+
+  // Call the prompt_user function to handle user input
+  prompt_user(win, output, prompt_input);
+
+  // End ncurses mode
+  delwin(win);
+  endwin();
 
   return 0;
 }
