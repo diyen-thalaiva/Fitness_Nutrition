@@ -162,6 +162,116 @@ int prompt_user_ai() {
 
 
 
+
+
+
+
+// Initialize the ncurses window and draw the layout
+static void drawWindow(WINDOW *win, char *output, char *prompt_input,
+                       int is_active_input, int is_submit_highlighted) {
+  int width = 105,
+      height = 20; // Define the frame width/height for the content area
+
+  // Draw the border with dark blue color
+  wattron(win, COLOR_PAIR(6)); // Use dark blue for border color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off the color
+
+  // Add header with color
+  wattron(win, COLOR_PAIR(2));
+  mvwprintw(win, 1, (width / 2) - 3, "Chatbot");
+  wattroff(win, COLOR_PAIR(2));
+
+  // Horizontal line under ACTIV X (blue)
+  wattron(win, COLOR_PAIR(6)); // Dark blue color
+  mvwhline(win, 2, 1, ACS_HLINE, width + 3);
+  mvwaddch(win, 2, 0, ACS_LTEE);         // Connect to left border
+  mvwaddch(win, 2, width + 4, ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
+
+  // Display the Query input section
+  wattron(win, COLOR_PAIR(1));
+  mvwprintw(win, 3, 2, "Query:");
+  mvwprintw(win, 4, 2, "%-105.105s", prompt_input); // Adjusted for larger width
+  if (is_active_input) {
+    wattron(win, A_REVERSE); // Highlight the input section if active
+    mvwprintw(win, 4, 2, "%-105.105s", prompt_input);
+    wattroff(win, A_REVERSE);
+  }
+  wattroff(win, COLOR_PAIR(1));
+
+  // Horizontal line after Query (blue)
+  wattron(win, COLOR_PAIR(6)); // Dark blue color for the second line
+  mvwhline(win, 5, 1, ACS_HLINE,
+           width + 3);                   // Horizontal line below query input
+  mvwaddch(win, 5, 0, ACS_LTEE);         // Connect to left border
+  mvwaddch(win, 5, width + 4, ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
+
+  // Clear the previous response before displaying a new one
+  clear_response_area(win, 7, 21,
+                      105); // Clear response area (7 to 17 for height 10 lines)
+
+  // Display the API response using word-wrap
+  wattron(win, COLOR_PAIR(3));
+  mvwprintw(win, 6, 2, "Response:");
+  display_wrapped_text(win, 7, 2, output, width,
+                       height + 0); // Wrap text within 105 characters
+  wattroff(win, COLOR_PAIR(3));
+
+  // Horizontal line before Submit and Time (magenta)
+  wattron(win, COLOR_PAIR(4)); // Magenta color for the line before submit/time
+  mvwhline(win, height + 1 + OFFSET_Y, 1, ACS_HLINE,
+           width + 3); // Horizontal line before Submit button
+  wattron(win, COLOR_PAIR(6));
+  mvwaddch(win, height + 1 + OFFSET_Y, 0, ACS_LTEE); // Connect to left border
+  mvwaddch(win, height + 1 + OFFSET_Y, width + 4,
+           ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
+
+  // **Vertical bar before Submit (white)**
+  wattron(win, COLOR_PAIR(7)); // White color for the vertical bar
+  for (int i = height + 2 + OFFSET_Y; i < height + 3 + OFFSET_Y; i++) {
+    mvwaddch(win, i, 16,
+             ACS_VLINE); // Position the vertical bar before "Submit"
+  }
+  wattroff(win, COLOR_PAIR(7));
+
+  // Submit button with color (closer to the bottom-left corner)
+  if (is_submit_highlighted) {
+    wattron(win, A_REVERSE); // Highlight the Submit button if active
+  }
+  wattron(win, COLOR_PAIR(4)); // Submit button uses magenta
+  mvwprintw(win, height + 2 + OFFSET_Y, 2,
+            "[ Submit ]"); // Submit button moved down closer to bottom-left
+  wattroff(win, COLOR_PAIR(4));
+  wattroff(win, A_REVERSE);
+
+  // **Vertical bar after Submit (white)**
+  wattron(win, COLOR_PAIR(7)); // White color for the vertical bar
+  for (int i = height + 2 + OFFSET_Y; i < height + 3 + OFFSET_Y; i++) {
+    mvwaddch(win, i, 85, ACS_VLINE); // Position the vertical bar after "Submit"
+  }
+  wattroff(win, COLOR_PAIR(7));
+
+  // Display the current time in the window (on the right side)
+  display_time(win, height, width);
+
+  wrefresh(win); // Refresh window to reflect changes
+}
+
+
+
+
+
+
+
+
+
+
+
+
 // Handle input for fitness-related queries
 static int prompt_user(WINDOW *win, char *output, char *prompt_input) {
   char input[500]; // Buffer for user input
