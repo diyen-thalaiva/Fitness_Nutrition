@@ -11,4 +11,12 @@ void display_time(WINDOW *win, int height, int width) {
   time(&rawtime);
   timeinfo = localtime(&rawtime);
   strftime(buffer, sizeof(buffer), "%H:%M", timeinfo);
-  
+
+  // Display the time next to the vertical bar with red color
+  wattron(win, COLOR_PAIR(5)); // Red color for the time
+  mvwprintw(win, height + 2 + OFFSET_Y, width - 13, "TIME: %s",
+            buffer); // Time moved down closer to bottom-right
+  wattroff(win, COLOR_PAIR(5));
+
+  wrefresh(win); // Refresh window to show the updated time
+}
