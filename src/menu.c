@@ -70,7 +70,7 @@ void draw_menu_window(WINDOW *win, char *menu_title, char *menu_options[],
 }
 int menu_system() {
   char *menu_title = "MAIN MENU";
-  char *menu_options[] = {"1. Ask LomeshAI", "2. Fitness & Nutrition Tracker",
+  char *menu_options[] = {"1. Ask OllamaAI", "2. Fitness & Nutrition Tracker",
                           "3. Quit"};
   int menu_option_count = sizeof(menu_options) / sizeof(menu_options[0]);
   int selected_option = 0;
@@ -120,8 +120,8 @@ int ch;
     case '\n': // User pressed Enter
       switch (selected_option) {
       case 0:
-        // Ask LomeshAI (you can implement this separately if needed)
-        mvwprintw(win, height - 2, 2, "LomeshAI selected...");
+        // Ask OllamaAI (you can implement this separately if needed)
+        mvwprintw(win, height - 2, 2, "OllamaAI selected...");
         wrefresh(win);
         sleep(3);
         ai_draw_prompt();
