@@ -144,6 +144,226 @@ int initCSV() {
 
 
 
+    int matchCount = 0;
+    int matchIndexes[MAX_MATCHES];
+
+    // Search for food matches
+    for (int i = 0; i < line_count; i++) {
+      if (my_strcasestr2(foodItems[i].food, input) != NULL) {
+        matchIndexes[matchCount] = i;
+        matchCount++;
+        if (matchCount >= MAX_MATCHES) {
+          break;
+        }
+      }
+    }
+
+    if (matchCount == 0) {
+      // No matching food found, display message and wait for 5 seconds
+      wattron(win, COLOR_PAIR(3)); // Adding color to "no match found" message
+      mvwprintw(win, startRow + 1, 2, "No matching food found for '%s'.",
+                input);
+      wattroff(win, COLOR_PAIR(3)); // Turn off the color
+      // Redraw border after activity input
+      wattron(win, COLOR_PAIR(6)); // Turn on blue color
+      wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+              ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+      wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+      wrefresh(win);                // Refresh the window after activity input
+      sleep(2);                     // Wait for 5 seconds before clearing
+    } else if (matchCount == 1) {
+      int idx = matchIndexes[0];
+      wattron(win, COLOR_PAIR(5)); // Red for the food consumption message
+      mvwprintw(win, startRow + 1, 2,
+                "Consumed %s, %sCalories per serving: %.2f",
+                foodItems[idx].food, foodItems[idx].serving,
+                foodItems[idx].calories);
+      // Redraw border after activity input
+      wattron(win, COLOR_PAIR(6)); // Turn on blue color
+      wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+              ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+      wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+      wrefresh(win);                // Refresh the window after activity input
+      wattroff(win, COLOR_PAIR(5)); // Turn off red color
+
+      float servings;
+      wattron(win, COLOR_PAIR(4)); // Magenta for servings prompt
+      mvwprintw(win, startRow + 2, 2, "How many servings did you consume? ");
+      // Redraw border after activity input
+      wattron(win, COLOR_PAIR(6)); // Turn on blue color
+      wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+              ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+      wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+      wrefresh(win);                // Refresh the window after activity input
+      wattroff(win, COLOR_PAIR(4)); // Turn off magenta color
+      wscanw(win, "%f", &servings);
+
+      float totalCalories = servings * foodItems[idx].calories;
+      totalCaloriesConsumed += totalCalories;
+      wattron(win, COLOR_PAIR(6)); // Blue for total calories for this food
+      mvwprintw(win, startRow + 3, 2,
+                "Total calories for this food/drink: %.2f Kcal", totalCalories);
+      wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  
+      // Store the consumed food name in the array
+      strcpy(consumedFoods[consumedCount], foodItems[idx].food);
+      consumedCount++;
+
+      // Wait for 5 seconds before clearing the screen
+      // Redraw border after activity input
+      wattron(win, COLOR_PAIR(6)); // Turn on blue color
+      wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+              ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+      wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+      wrefresh(win);                // Refresh the window after activity input
+      sleep(5);                     // Wait 5 seconds
+    } else {
+      int selectedIndex = 0;
+      int choice = -1;
+
+      // Enable keypad mode for window to capture arrow keys
+      keypad(win, TRUE); // Ensure arrow keys work
+
+      // Disable nodelay mode to wait for keypress
+      nodelay(win, FALSE);
+
+      while (1) {
+        clearFoodEntry(win, startRow + 1, startRow + 4 + matchCount, width);
+
+        wattron(win, COLOR_PAIR(3)); // Color for multiple match prompt
+        mvwprintw(win, startRow + 1, 2,
+                  "Multiple matches found. Use UP/DOWN arrows to select:");
+        wattroff(win, COLOR_PAIR(3)); // Turn off color
+
+        // Display food options and highlight the selected one
+        for (int i = 0; i < matchCount; i++) {
+          if (i == selectedIndex) {
+            wattron(win, A_REVERSE); // Highlight the selected option
+          }
+          mvwprintw(win, startRow + 2 + i, 2, "%d. %s", i + 1,
+                    foodItems[matchIndexes[i]].food);
+          wattroff(win, A_REVERSE); // Turn off highlight
+        }
+
+        // Redraw border after activity input
+        wattron(win, COLOR_PAIR(6)); // Turn on blue color
+        wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+                ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+        wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+        wrefresh(win);                // Refresh the window after activity input
+
+        int ch = wgetch(win); // Capture keyboard input
+        if (ch == KEY_UP) {
+          if (selectedIndex > 0) {
+            selectedIndex--;
+          }
+        } else if (ch == KEY_DOWN) {
+          if (selectedIndex < matchCount - 1) {
+            selectedIndex++;
+          }
+        } else if (ch == '\n') { // Enter key
+          choice = selectedIndex;
+          break;
+        } else if (ch == KEY_LEFT) {
+          menu_system();
+          break;
+        }
+      }
+
+      if (choice >= 0 && choice < matchCount) {
+        int idx = matchIndexes[choice];
+        wattron(win, COLOR_PAIR(5)); // Red for the selected food
+        mvwprintw(win, startRow + 3 + matchCount, 2,
+                  "Consumed %s, %sCalories per serving: %.2f",
+                  foodItems[idx].food, foodItems[idx].serving,
+                  foodItems[idx].calories);
+        // Redraw border after activity input
+        wattron(win, COLOR_PAIR(6)); // Turn on blue color
+        wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+                ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+        wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+        wrefresh(win);                // Refresh the window after activity input
+
+        float servings;
+        wattron(win, COLOR_PAIR(4)); // Magenta for servings prompt
+        mvwprintw(win, startRow + 4 + matchCount, 2,
+                  "How many servings did you consume? ");
+        wattroff(win, COLOR_PAIR(4)); // Turn off magenta color
+        wscanw(win, "%f", &servings);
+
+        float totalCalories = servings * foodItems[idx].calories;
+        totalCaloriesConsumed += totalCalories;
+        wattron(win, COLOR_PAIR(6)); // Blue for total calories for this food
+        mvwprintw(win, startRow + 5 + matchCount, 2,
+                  "Total calories for this food: %.2f Kcal", totalCalories);
+        wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+
+        strcpy(consumedFoods[consumedCount], foodItems[idx].food);
+        consumedCount++;
+
+        // Redraw border after activity input
+        wattron(win, COLOR_PAIR(6)); // Turn on blue color
+        wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+                ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+        wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+        wrefresh(win);                // Refresh the window after activity input
+        sleep(5);                     // Wait 5 seconds
+      }
+    }
+
+    wattron(win, COLOR_PAIR(3)); // Green for total calories consumed
+    mvwprintw(win, 20 + OFFSET_Y, 2,
+              "Total calories consumed so far: %.2f Kcal",
+              totalCaloriesConsumed);
+    wattroff(win, COLOR_PAIR(3)); // Turn off green color
+    // Redraw border after activity input
+    wattron(win, COLOR_PAIR(6)); // Turn on blue color
+    wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+            ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+    wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+    wrefresh(win);                // Refresh the window after activity input
+  }
+
+  noecho(); // Disable character echoing after input
+
+  finalCaloriesConsumed = totalCaloriesConsumed;
+
+  // Display all the food that the user has consumed when "exit" is typed
+  clearFoodEntry(win, startRow, endRow,
+                 width);       // Clear the screen for the summary
+  wattron(win, COLOR_PAIR(5)); // Color for food list
+  mvwprintw(win, startRow, 2, "You have eaten/drank the following items:");
+
+  for (int i = 0; i < consumedCount; i++) {
+    mvwprintw(win, startRow + i + 1, 2, "%d. %s", i + 1,
+              consumedFoods[i]); // List all consumed food items
+  }
+  wattroff(win, COLOR_PAIR(1)); // Turn off the color for the summary
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  
+  sleep(5);
+  display_fitness_menu();
+
+  // No exit or auto-close; leave the window open indefinitely for the user to
+  // close manually
+  while (1) {
+    // Infinite loop to keep the list displayed
+  }
+}
+
+
+
+
+
+
+
+
+
 
 
 int display_nutrition_menu() {
