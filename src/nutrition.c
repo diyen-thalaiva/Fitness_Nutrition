@@ -144,6 +144,108 @@ int initCSV() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Clear the area used for food input and results, but exclude the time area
+void clearFoodEntry(WINDOW *win, int startRow, int endRow, int width) {
+  // Adjust the endRow so it doesn't include the time section
+  for (int i = startRow; i <= endRow + 3;
+       i++) { // -4 keeps the bottom lines untouched
+    mvwprintw(win, i, 2, "%*s", width - 4,
+              " "); // Clear row content respecting the window width
+  }
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+}
+
+void promptForFood(WINDOW *win, int width) {
+  float totalCaloriesConsumed;
+  extern float finalCaloriesConsumed;
+  int continueInput = 1;
+
+  char consumedFoods[100][50]; // Array to store the names of the consumed foods
+  int consumedCount = 0;       // Count of foods consumed
+
+  echo();           // Enable typed character echoing
+  int startRow = 5; // Row where food input starts
+  int endRow = 20;  // Row where we will clear till
+
+  // Calculate the max length of input based on window width
+  int maxInputLength = width - 8; // 6 = 4 spaces for prompt ">" + 2 extra
+                                  // padding, adjusted to 8 for safety
+
+  while (continueInput) {
+    // Clear previous entry after processing
+    clearFoodEntry(win, startRow, endRow, width);
+
+    char input[100];
+    wattron(win, COLOR_PAIR(1)); // Add color to the input prompt
+    mvwprintw(win, startRow, 2, "> ");
+    // Redraw border after activity input
+    wattron(win, COLOR_PAIR(6)); // Turn on blue color
+    wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+            ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+    wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+    wrefresh(win);                // Refresh the window after activity input
+    wattroff(win, COLOR_PAIR(1)); // Turn off color after the prompt
+
+    // Input is limited to maxInputLength to avoid overflowing
+    mvwgetnstr(win, startRow, 4, input,
+               maxInputLength - 1); // Keep 1 char for the null terminator
+
+    // Handle "exit" command
+    if (strcasecmp(input, "exit") == 0) {
+      continueInput = 0; // Set the flag to stop the loop
+      break;             // Exit the loop immediately
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     int matchCount = 0;
     int matchIndexes[MAX_MATCHES];
 
