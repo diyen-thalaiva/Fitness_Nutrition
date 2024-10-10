@@ -10,15 +10,36 @@
 #include "menu.h"
 #include "ai.h"
 
-static const char *fitness_keywords[] = {
-    "fitness",   "nutrition", "exercise", "workout",  "diet", "calories",
-    "protein",   "muscle",    "cardio",   "strength", "yoga", "hydration",
-    "endurance", "training",  "wellness", "recovery", "fat",  "health",
-    "gym",       "weight",    "lift"};
+// Curl write callback
+static size_t write_callback(void *ptr, size_t size, size_t nmemb,
+                             void *userdata) {
+  size_t total_size = size * nmemb;
+  strncat(userdata, (char *)ptr, total_size);
+  return total_size;
+}
 
-static int num_keywords =
-    sizeof(fitness_keywords) / sizeof(fitness_keywords[0]);
+// Decode escaped characters (like \n, \", etc.)
+static void decode_escaped_characters(char *str) {
+  char *src = str;
+  char *dest = str;
+  while (*src) {
+    if (src[0] == '\\' && src[1] == 'n') {
+      *dest++ = '\n';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\"') {
+      *dest++ = '\"';
+      src += 2;
+    } else if (src[0] == '\\' && src[1] == '\\') {
+      *dest++ = '\\';
+      src += 2;
+    } else {
+      *dest++ = *src++;
+    }
+  }
+  *dest = '\0';
+}
 
+// Check if the query is related to fitness
 static int is_fitness_related(char *input) {
   char lower_input[500];
   for (int i = 0; input[i]; i++) {
@@ -34,6 +55,7 @@ static int is_fitness_related(char *input) {
   return 0;
 }
 
+// Extract JSON response for display
 static void extract_response(char *json_response, char *output) {
   char *start = strstr(json_response, "\"response\":");
   if (start != NULL) {
@@ -57,110 +79,149 @@ static void extract_response(char *json_response, char *output) {
   }
 }
 
-static size_t write_callback(void *ptr, size_t size, size_t nmemb,
-                             void *userdata) {
-  size_t total_size = size * nmemb;
-  strncat(userdata, (char *)ptr, total_size);
-  return total_size;
+// Function to clear the entire response area in the window
+static void clear_response_area(WINDOW *win, int start_y, int height,
+                                int width) {
+  for (int i = 0; i < height; i++) {
+    mvwprintw(win, start_y + i, 2, "%-*s", width,
+              " "); // Clear the line with spaces
+  }
+  wrefresh(win); // Refresh window to reflect changes
 }
 
-static void decode_escaped_characters(char *str) {
-  char *src = str;
-  char *dest = str;
+// Function to display text with word-wrapping within a given width
+static void display_wrapped_text(WINDOW *win, int start_y, int start_x,
+                                 const char *text, int width, int height) {
+  int len = strlen(text);
+  int line_start = 0, line_count = 0;
 
-  while (*src) {
-    if (src[0] == '\\' && src[1] == 'n') {
-      *dest++ = '\n';
-      src += 2;
-    } else if (src[0] == '\\' && src[1] == '\"') {
-      *dest++ = '\"';
-      src += 2;
-    } else if (src[0] == '\\' && src[1] == '\\') {
-      *dest++ = '\\';
-      src += 2;
-    } else {
-      *dest++ = *src++;
+  for (int i = 0; i < len; i++) {
+    if (i - line_start >= width || text[i] == '\n') {
+      if (line_count < height) {
+        mvwprintw(win, start_y + line_count, start_x, "%.*s", i - line_start,
+                  text + line_start);
+      }
+      line_count++;
+      line_start = i;
+      if (text[i] == '\n') {
+        line_start++;
+      }
     }
   }
-
-  *dest = '\0';
+  if (line_start < len && line_count < height) {
+    mvwprintw(win, start_y + line_count, start_x, "%s", text + line_start);
+  }
 }
 
-int prompt_user_ai() {
-  char input[500];
-
-  printf("Please enter a query: ");
-  fgets(input, sizeof(input), stdin);
-  input[strcspn(input, "\n")] = 0;
-
-  if (strcmp(input, "exit") == 0) {
-    printf("Exiting the program.\n");
-    return -1;
-  }
-
-  if (!is_fitness_related(input)) {
-    printf("Please ask questions related to fitness, nutrition, or physical "
-           "exercise.\n\n");
-    return 0;
-  }
-
-  CURL *curl;
-  CURLcode res;
-  char *url = "http://localhost:11434/api/generate";
-  char response[10000] = {0};
-  char extracted_response[10000] = {0};
-
-  char json_payload[500];
-  snprintf(json_payload, sizeof(json_payload),
-           "{\"model\": \"qwen2.5:0.5b\", \"prompt\": \"%s\", \"stream\": false}",
-           input);
-
-  curl = curl_easy_init();
-
-  if (curl) {
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_payload);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-
-    res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-      fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(res));
-    } else {
-      extract_response(response, extracted_response);
-      printf("Extracted Response:\n%s\n\n", extracted_response);
-    }
-
-    curl_easy_cleanup(curl);
-    curl_slist_free_all(headers);
-  }
-
-  return 0;
+// Function to display the current time in the window
+static void display_time(WINDOW *win, int height, int width) {
+  time_t rawtime;
+  struct tm *timeinfo;
+  char buffer[9];
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buffer, sizeof(buffer), "%H:%M:%S", timeinfo);
+  wattron(win, COLOR_PAIR(5));
+  mvwprintw(win, height + 2 + OFFSET_Y, width - 15, "TIME: %s",
+            buffer); // Time moved down closer to bottom-right
+  wattroff(win, COLOR_PAIR(5));
+  wrefresh(win);
 }
 
+// Initialize the ncurses window and draw the layout
+static void drawWindow(WINDOW *win, char *output, char *prompt_input,
+                       int is_active_input, int is_submit_highlighted) {
+  int width = 105,
+      height = 20; // Define the frame width/height for the content area
 
+  // Draw the border with dark blue color
+  wattron(win, COLOR_PAIR(6)); // Use dark blue for border color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off the color
 
+  // Add header with color
+  wattron(win, COLOR_PAIR(2));
+  mvwprintw(win, 1, (width / 2) - 3, "Chatbot");
+  wattroff(win, COLOR_PAIR(2));
 
+  // Horizontal line under ACTIV X (blue)
+  wattron(win, COLOR_PAIR(6)); // Dark blue color
+  mvwhline(win, 2, 1, ACS_HLINE, width + 3);
+  mvwaddch(win, 2, 0, ACS_LTEE);         // Connect to left border
+  mvwaddch(win, 2, width + 4, ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
 
+  // Display the Query input section
+  wattron(win, COLOR_PAIR(1));
+  mvwprintw(win, 3, 2, "Query:");
+  mvwprintw(win, 4, 2, "%-105.105s", prompt_input); // Adjusted for larger width
+  if (is_active_input) {
+    wattron(win, A_REVERSE); // Highlight the input section if active
+    mvwprintw(win, 4, 2, "%-105.105s", prompt_input);
+    wattroff(win, A_REVERSE);
+  }
+  wattroff(win, COLOR_PAIR(1));
 
+  // Horizontal line after Query (blue)
+  wattron(win, COLOR_PAIR(6)); // Dark blue color for the second line
+  mvwhline(win, 5, 1, ACS_HLINE,
+           width + 3);                   // Horizontal line below query input
+  mvwaddch(win, 5, 0, ACS_LTEE);         // Connect to left border
+  mvwaddch(win, 5, width + 4, ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
 
+  // Clear the previous response before displaying a new one
+  clear_response_area(win, 7, 21,
+                      105); // Clear response area (7 to 17 for height 10 lines)
 
+  // Display the API response using word-wrap
+  wattron(win, COLOR_PAIR(3));
+  mvwprintw(win, 6, 2, "Response:");
+  display_wrapped_text(win, 7, 2, output, width,
+                       height + 0); // Wrap text within 105 characters
+  wattroff(win, COLOR_PAIR(3));
 
+  // Horizontal line before Submit and Time (magenta)
+  wattron(win, COLOR_PAIR(4)); // Magenta color for the line before submit/time
+  mvwhline(win, height + 1 + OFFSET_Y, 1, ACS_HLINE,
+           width + 3); // Horizontal line before Submit button
+  wattron(win, COLOR_PAIR(6));
+  mvwaddch(win, height + 1 + OFFSET_Y, 0, ACS_LTEE); // Connect to left border
+  mvwaddch(win, height + 1 + OFFSET_Y, width + 4,
+           ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
 
+  // **Vertical bar before Submit (white)**
+  wattron(win, COLOR_PAIR(7)); // White color for the vertical bar
+  for (int i = height + 2 + OFFSET_Y; i < height + 3 + OFFSET_Y; i++) {
+    mvwaddch(win, i, 16,
+             ACS_VLINE); // Position the vertical bar before "Submit"
+  }
+  wattroff(win, COLOR_PAIR(7));
 
+  // Submit button with color (closer to the bottom-left corner)
+  if (is_submit_highlighted) {
+    wattron(win, A_REVERSE); // Highlight the Submit button if active
+  }
+  wattron(win, COLOR_PAIR(4)); // Submit button uses magenta
+  mvwprintw(win, height + 2 + OFFSET_Y, 2,
+            "[ Submit ]"); // Submit button moved down closer to bottom-left
+  wattroff(win, COLOR_PAIR(4));
+  wattroff(win, A_REVERSE);
 
+  // **Vertical bar after Submit (white)**
+  wattron(win, COLOR_PAIR(7)); // White color for the vertical bar
+  for (int i = height + 2 + OFFSET_Y; i < height + 3 + OFFSET_Y; i++) {
+    mvwaddch(win, i, 85, ACS_VLINE); // Position the vertical bar after "Submit"
+  }
+  wattroff(win, COLOR_PAIR(7));
 
+  // Display the current time in the window (on the right side)
+  display_time(win, height, width);
 
-
-
-
-
+  wrefresh(win); // Refresh window to reflect changes
+}
 
 // Handle input for fitness-related queries
 static int prompt_user(WINDOW *win, char *output, char *prompt_input) {
@@ -288,16 +349,6 @@ static int prompt_user(WINDOW *win, char *output, char *prompt_input) {
 
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
 
 int ai_draw_prompt() {
   char prompt_input[MAX_QUERY_LENGTH] = {0}; // Store the input from the user
