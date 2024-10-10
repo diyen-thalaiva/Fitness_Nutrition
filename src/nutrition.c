@@ -1,9 +1,18 @@
 #include <ctype.h>
+#include <curses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h> // for usleep()
 
-#include "nutrition.h"
+#include "fitness.h"
+#include "globals.h"
+#include "utils.h"
+#include "menu.h"
+
+#define MAX_FOOD_ITEMS 1000
+#define MAX_MATCHES 13
 
 char *my_strcasestr2(const char *haystack, const char *needle) {
   if (!*needle) {
