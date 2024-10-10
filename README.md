@@ -1,6 +1,6 @@
 # ACTIV X
 
-<img src="https://github.com/TAX-2905/Fitness_Nutrition/blob/patch-1/Logo.png?raw=true" alt="Logo" width="400" height="400">
+<img src="https://github.com/TAX-2905/Fitness_Nutrition/blob/master/Logo.png?raw=true" alt="Logo" width="400" height="400">
 
 ## Project Overview
 
