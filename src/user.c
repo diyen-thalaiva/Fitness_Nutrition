@@ -140,3 +140,176 @@ void displayUserDetails(WINDOW *win, User user) {
   wattroff(win, COLOR_PAIR(6)); // Turn off blue color
   wrefresh(win);                // Refresh the window after activity input
 }
+
+int navigateAndSelectProfile(WINDOW *win, User users[], int *userCount) {
+  int highlight = 0; // Track which profile is highlighted
+  int choice;
+  int selected = -1;
+
+  keypad(win, TRUE); // Enable arrow key input
+
+  while (1) {
+    // Only update the highlighted part, avoid clearing the window
+    displayProfiles(win, users, *userCount,
+                    highlight); // Display profiles with highlighting
+
+    choice = wgetch(win); // Capture user input
+
+    switch (choice) {
+    case KEY_UP:
+      if (highlight > 0)
+        highlight--;
+      break;
+    case KEY_DOWN:
+      if (highlight < *userCount && highlight < MAX_USERS)
+        highlight++;
+      break;
+    case 10: // Enter key
+      if (highlight == *userCount && *userCount < MAX_USERS) {
+        // Add new profile when highlighted option is "Add New Profile"
+        wattron(win, COLOR_PAIR(5)); // Set color for adding new profile text
+        mvwprintw(win, 25, 2, "Adding a new profile!\n");
+        wattron(win, COLOR_PAIR(6)); // Turn on blue color
+        wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+                ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+        wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+        wrefresh(win);                // Refresh the window after activity input
+        wattroff(win,
+                 COLOR_PAIR(5)); // Turn off color for adding new profile text
+        getUserDetails(win, &users[*userCount]); // Add new profile
+        saveProfileToFile(users[*userCount]);
+        (*userCount)++;                          // Increment the user count
+        wclear(win); // Clear the window after adding the profile
+        drawUsersWindow(win, 20, 110); // Redraw the window
+        highlight = *userCount - 1;    // Set highlight to new profile
+      } else {
+        selected = highlight;
+        return selected; // Return the selected profile index
+      }
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+float getUserDetails(WINDOW *win, User *newUser) {
+  echo();
+
+  // Set a safe maximum input width for each field to avoid breaking the right
+  // border
+  int inputMaxWidth =
+      50; // Maximum width for input (adjust to window width as necessary)
+
+  wattron(win, COLOR_PAIR(2)); // Set color for input text prompts
+  mvwprintw(win, 10, 2, "Enter your name: ");
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wclrtoeol(
+      win); // Clear the line before input to ensure old input doesn't persist
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wgetnstr(win, newUser->name,
+           inputMaxWidth - 1); // Limit input length to fit within the window
+
+  wattron(win, COLOR_PAIR(2)); // Set color for input text prompts
+  mvwprintw(win, 11, 2, "Enter your age: ");
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wclrtoeol(win);               // Clear the line before input
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wscanw(win, "%d", &newUser->age);
+
+  wattron(win, COLOR_PAIR(2)); // Set color for input text prompts
+  mvwprintw(win, 12, 2, "Enter your gender (M/F): ");
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wclrtoeol(win);               // Clear the line before input
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wscanw(win, "%s", newUser->gender);
+
+  wattron(win, COLOR_PAIR(2)); // Set color for input text prompts
+  mvwprintw(win, 13, 2, "Enter your height (in meters): ");
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wclrtoeol(win);               // Clear the line before input
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wscanw(win, "%f", &newUser->height);
+
+  wattron(win, COLOR_PAIR(2)); // Set color for input text prompts
+  mvwprintw(win, 14, 2, "Enter your weight (in kg): ");
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wclrtoeol(win);               // Clear the line before input
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  wscanw(win, "%f", &newUser->weight);
+
+  wattroff(win, COLOR_PAIR(3)); // Turn off color for input text prompts
+
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+
+  wattron(win, COLOR_PAIR(5)); // Set color for success message
+  mvwprintw(win, 25, 2, "New profile added successfully!\n");
+  wattroff(win, COLOR_PAIR(5)); // Turn off color for success message
+
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+  usleep(1000000);              // Delay for 1 second
+
+  noecho();
+
+  return newUser->weight;
+}
