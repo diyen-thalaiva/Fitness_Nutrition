@@ -1,22 +1,25 @@
-#ifndef NUTRITION_H
+#ifndef NUTRITION_H 
 #define NUTRITION_H
+#include <curses.h>
 
-#define MAX_LINE_LENGTH 1024
 #define MAX_FOOD_ITEMS 1000
-#define MAX_MATCHES 50
-#define CSV_NUTRITION_PATH "dataset/FoodandCalories.csv"
+#define MAX_MATCHES 13
 
-typedef struct FoodItem {
-  char food[100];
-  char serving[100];
+// Define the structure for food items
+typedef struct {
+  char food[4000];
+  char serving[500];
   float calories;
 } FoodItem;
 
-static FoodItem foodItems[MAX_FOOD_ITEMS];
-static int line_count = 0;
-
+extern float finalCaloriesConsumed;
+void initFoodItems();
 char *my_strcasestr2(const char *haystack, const char *needle);
-int promptForFood();
-int initCSV();
+void drawLayout(WINDOW *win, int width);
+void clearFoodEntry(WINDOW *win, int startRow, int endRow, int width);
+void promptForFood(WINDOW *win, int width);
 
-#endif
+
+int display_nutrition_menu();
+
+#endif // !NUTRITION_H
