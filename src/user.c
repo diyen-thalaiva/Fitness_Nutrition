@@ -117,3 +117,26 @@ void displayProfiles(WINDOW *win, User users[], int userCount, int highlight) {
   wattroff(win, COLOR_PAIR(6)); // Turn off blue color
   wrefresh(win);                // Refresh the window after activity input
 }
+
+void displayUserDetails(WINDOW *win, User user) {
+  wclear(win); // Clear the window before drawing profile details
+
+  // Redraw the window after clearing it
+  drawUsersWindow(win, 20, 110);
+
+  wattron(win, COLOR_PAIR(1)); // Set color for user details
+  mvwprintw(win, 5, 2, "Name: %s",
+            user.name); // Adjusted all x-coordinates to 2 for left alignment
+  mvwprintw(win, 6, 2, "Age: %d", user.age);
+  mvwprintw(win, 7, 2, "Gender: %s", user.gender);
+  mvwprintw(win, 8, 2, "Height: %.2f meters", user.height);
+  mvwprintw(win, 9, 2, "Weight: %.2f kg", user.weight);
+  wattroff(win, COLOR_PAIR(1)); // Turn off color for user details
+
+  // Redraw border after activity input
+  wattron(win, COLOR_PAIR(6)); // Turn on blue color
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6)); // Turn off blue color
+  wrefresh(win);                // Refresh the window after activity input
+}
