@@ -100,3 +100,59 @@ int menu_system() {
 
   // Non-blocking input
   nodelay(win, TRUE); // Do not block input waiting for a keypress
+
+int ch;
+  while (1) {
+    draw_menu_window(win, menu_title, menu_options, selected_option,
+                     menu_option_count);
+
+    // Fetch input without waiting (non-blocking)
+    ch = wgetch(win);
+    switch (ch) {
+    case KEY_UP:
+      selected_option =
+          (selected_option - 1 + menu_option_count) % menu_option_count;
+      break;
+    case KEY_DOWN:
+      selected_option = (selected_option + 1) % menu_option_count;
+      break;
+    case '\n': // User pressed Enter
+      switch (selected_option) {
+      case 0:
+        // Ask LomeshAI (you can implement this separately if needed)
+        mvwprintw(win, height - 2, 2, "LomeshAI selected...");
+        wrefresh(win);
+        sleep(3);
+        ai_draw_prompt();
+        break;
+      case 1:
+        // Fitness & Nutrition Tracker
+        mvwprintw(win, height - 2, 2, "Fitness Tracker selected...");
+        wrefresh(win);
+        sleep(3);  // Add sleep(3) here to wait before drawing users menu
+        draw_users_menu();
+        wrefresh(win);
+        sleep(1);  
+        break;
+      case 2:
+        // Quit
+        delwin(win);
+        endwin();
+        exit(0);
+        return 0;
+      }
+      break;
+    default:
+      break;
+    }
+
+    // Update time every 500 milliseconds
+    usleep(50); // Sleep for 500 milliseconds (half a second)
+    display_time(win, height, width); // Redraw the time
+  }
+
+  delwin(win);
+  endwin();
+
+  return 0;
+}
