@@ -14,6 +14,51 @@
 #define MAX_FOOD_ITEMS 1000
 #define MAX_MATCHES 13
 
+// Define the structure for food items
+typedef struct {
+  char food[4000];
+  char serving[500];
+  float calories;
+} FoodItem;
+
+FoodItem foodItems[MAX_FOOD_ITEMS];
+int line_count = 0; // Global variable to keep track of food item count
+
+// Function to initialize food items from CSV file
+void initFoodItems() {
+    FILE *file = fopen("C:/Users/lomes/OneDrive/Desktop/Final/dataset/FoodandCalories.csv", "r");
+    if (file == NULL) {
+        printf("Error opening file\n");
+        return;
+    }
+
+  char line[1024];
+  int count = 0;
+
+  // Skip the header line
+  fgets(line, 1024, file);
+
+  while (fgets(line, 1024, file)) {
+    char *token = strtok(line, ",");
+    if (token != NULL && count < MAX_FOOD_ITEMS) {
+      // Extract Food column
+      strcpy(foodItems[count].food, token);
+
+      // Move to next token for Calories column
+      token = strtok(NULL, ",");
+      if (token != NULL) {
+        foodItems[count].calories =
+            atof(token); // Convert string to float for calories
+        count++;
+      }
+    }
+  }
+
+  fclose(file);
+  line_count = count; // Set the count of items loaded
+}
+
+// Function for case-insensitive substring search
 char *my_strcasestr2(const char *haystack, const char *needle) {
   if (!*needle) {
     return (char *)haystack;
@@ -34,153 +79,61 @@ char *my_strcasestr2(const char *haystack, const char *needle) {
   return NULL;
 }
 
-int promptForFood() {
-  float totalCaloriesConsumed = 0.0;
-  int continueInput = 1;
+void drawLayout(WINDOW *win, int width) {
+  int height = 20;
+  // Border and layout
+  wattron(win, COLOR_PAIR(6));
+  wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
+          ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
+  wattroff(win, COLOR_PAIR(6));
 
-  while (continueInput) {
-    char input[100];
-    printf("Enter the food or drink you have consumed (or type 'exit' to finish): ");
-    scanf("%s", input);
-    input[strcspn(input, "\n")] = '\0';
+  // Header and separator
+  wattron(win, COLOR_PAIR(2));
+  mvwprintw(win, 1, 42, "  Calorie Tracker  ");               
+  wattroff(win, COLOR_PAIR(4));
 
-    if (strcasecmp(input, "exit") == 0) {
-      continueInput = 0;
-      break;
-    }
+  wattron(win, COLOR_PAIR(6));
+  mvwhline(win, 2, 1, ACS_HLINE, width - 2); // Line under header
+  wattroff(win, COLOR_PAIR(6));
 
-    int matchCount = 0;
-    int matchIndexes[MAX_MATCHES];
+  // Horizontal line before Submit and Time (magenta)
+  wattron(win, COLOR_PAIR(4)); // Magenta color for the line before submit/time
+  mvwhline(win, height + 1 + OFFSET_Y, 1, ACS_HLINE,
+           width - 2); // Horizontal line before Submit button
+  wattron(win, COLOR_PAIR(6));
+  mvwaddch(win, height + 1 + OFFSET_Y, 0, ACS_LTEE); // Connect to left border
+  mvwaddch(win, height + 1 + OFFSET_Y, width - 1,
+           ACS_RTEE); // Connect to right border
+  wattroff(win, COLOR_PAIR(6));
+  ;
 
-    for (int i = 0; i < line_count; i++) {
-      if (my_strcasestr2(foodItems[i].food, input) !=
-          NULL) { // Substring case-insensitive match
-        matchIndexes[matchCount] = i;
-        matchCount++;
-        if (matchCount >= MAX_MATCHES) {
-          break;
-        }
-      }
-    }
-
-    if (matchCount == 0) {
-      printf("No matching food or drink found in the list.\n");
-    } else if (matchCount == 1) {
-      int idx = matchIndexes[0];
-      printf("You consumed %s, Serving: %s, Calories per serving: %.2f\n",
-             foodItems[idx].food, foodItems[idx].serving,
-             foodItems[idx].calories);
-
-      float servings;
-      printf("How many servings did you consume? ");
-      scanf("%f", &servings);
-      while (getchar() != '\n')
-        ; // Clear the input buffer
-
-      float totalCalories = servings * foodItems[idx].calories;
-      totalCaloriesConsumed += totalCalories;
-      printf("Total calories consumed for this food: %.2f Kcal\n",
-             totalCalories);
-    } else {
-      printf("Multiple matches found. Please select the correct food by number:\n");
-      for (int i = 0; i < matchCount; i++) {
-        
-        printf("%d. %s\n", i+1, foodItems[matchIndexes[i]].food);
-      
-      }
+  // Display the vertical bar before the time with white color
+  wattron(win, COLOR_PAIR(7)); // Assuming color pair 7 is white
+  mvwprintw(win, height + 2 + OFFSET_Y, width - 16,
+            "|"); // White vertical bar before time
+  wattroff(win, COLOR_PAIR(7));
 
 
-      int choice;
-      printf("Enter the number corresponding to the correct food or drink: ");
-      scanf("%d", &choice);
-      while (getchar() != '\n')
-        ; // Clear the input buffer
+  wattron(win, COLOR_PAIR(3)); // Submit button uses magenta
+  mvwprintw(win, height + 2 + OFFSET_Y, 5,
+            "ACTIV X"); // Submit button moved down closer to bottom-left
+  wattroff(win, COLOR_PAIR(3));
+  wattroff(win, A_REVERSE);
 
-      if (choice > 0 && choice <= matchCount) {
-        int idx = matchIndexes[choice - 1];
-        printf("You consumed %s, Serving: %s, Calories per serving: %.2f\n",
-               foodItems[idx].food, foodItems[idx].serving,
-               foodItems[idx].calories);
+  // Display the vertical bar before the time with white color
+  wattron(win, COLOR_PAIR(7)); // Assuming color pair 7 is white
+  mvwprintw(win, height + 2 + OFFSET_Y, width - 95,
+            "|"); // White vertical bar before time
+  wattroff(win, COLOR_PAIR(7));
 
-        float servings;
-        printf("How many servings did you consume? ");
-        scanf("%f", &servings);
-        while (getchar() != '\n')
-          ; // Clear the input buffer
+  // Display instructions
+  wattron(win, COLOR_PAIR(1)); // Using color pair 1 for this text
+  mvwprintw(win, 3, 2,
+            "Enter the food or drink you consumed (type 'exit' to finish):");
+  wattroff(win, COLOR_PAIR(1));
 
-        float totalCalories = servings * foodItems[idx].calories;
-        totalCaloriesConsumed += totalCalories;
-        printf("Total calories consumed for this food: %.2f Kcal\n",
-               totalCalories);
-      } else {
-        printf("Invalid selection.\n");
-      }
-    }
-  }
-
-  return totalCaloriesConsumed;
+  display_time(win, height, width);
 }
-
-int initCSV() {
-  FILE *file = fopen(CSV_NUTRITION_PATH, "r");
-  if (file == NULL) {
-    printf("Error: Could not open file.\n");
-    return 1;
-  }
-
-  char line[MAX_LINE_LENGTH];
-
-  fgets(line, MAX_LINE_LENGTH, file);
-
-  while (fgets(line, MAX_LINE_LENGTH, file) && line_count < MAX_FOOD_ITEMS) {
-    sscanf(line, "%[^,],%[^,],%f", foodItems[line_count].food,
-           foodItems[line_count].serving, &foodItems[line_count].calories);
-    line_count++;
-  }
-
-  fclose(file);
-
-  return 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Clear the area used for food input and results, but exclude the time area
 void clearFoodEntry(WINDOW *win, int startRow, int endRow, int width) {
@@ -238,22 +191,6 @@ void promptForFood(WINDOW *win, int width) {
       continueInput = 0; // Set the flag to stop the loop
       break;             // Exit the loop immediately
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     int matchCount = 0;
     int matchIndexes[MAX_MATCHES];
@@ -466,16 +403,6 @@ void promptForFood(WINDOW *win, int width) {
     // Infinite loop to keep the list displayed
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 int display_nutrition_menu() {
   // Initialize food items directly within the program
