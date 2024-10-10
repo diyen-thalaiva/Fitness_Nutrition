@@ -67,3 +67,36 @@ void draw_menu_window(WINDOW *win, char *menu_title, char *menu_options[],
 
   wrefresh(win); // Refresh window to reflect changes
 }
+int menu_system() {
+  char *menu_title = "MAIN MENU";
+  char *menu_options[] = {"1. Ask LomeshAI", "2. Fitness & Nutrition Tracker",
+                          "3. Quit"};
+  int menu_option_count = sizeof(menu_options) / sizeof(menu_options[0]);
+  int selected_option = 0;
+
+  // Initialize ncurses
+  initscr();
+  start_color(); // Enable color functionality
+  cbreak();
+  noecho();
+  keypad(stdscr, TRUE); // Enable arrow keys for stdscr
+  curs_set(0);          // Hide cursor
+
+  // Initialize colors
+  init_pair(1, COLOR_YELLOW, COLOR_BLACK); // Color for menu options
+  init_pair(2, COLOR_CYAN, COLOR_BLACK);   // Header color
+  init_pair(4, COLOR_MAGENTA,
+            COLOR_BLACK); // Color for submit button and magenta line
+  init_pair(5, COLOR_RED, COLOR_BLACK); // Color for time
+  init_pair(6, COLOR_BLUE,
+            COLOR_BLACK); // Dark blue for horizontal lines and border
+
+  // Create the window and draw the initial layout
+  int width = 110, height = 30; // Increased window size
+  WINDOW *win = newwin(height, width, (LINES - height) / 2, (COLS - width) / 2);
+
+  // Enable keypad input for the window (important to catch arrow keys)
+  keypad(win, TRUE); // Enable arrow keys for the custom window `win`
+
+  // Non-blocking input
+  nodelay(win, TRUE); // Do not block input waiting for a keypress
