@@ -75,7 +75,7 @@ void draw_menu_window(WINDOW *win, char *menu_title, char *menu_options[],
 int menu_system() {
   char *menu_title = "MAIN MENU";
   char *menu_options[] = {"1. Ask OllamaAI", "2. Nutrition Tracker",
-                          "3. Fitness", "4. Progress", "5. Quit"};
+                          "3. Fitness Tracker", "4. Progress", "5. Quit"};
   int menu_option_count = sizeof(menu_options) / sizeof(menu_options[0]);
   int selected_option = 0;
 
