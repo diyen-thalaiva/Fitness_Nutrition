@@ -1,14 +1,17 @@
-
 #include <curses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "ai.h"
+#include "calc.h"
+#include "fitness.h"
 #include "globals.h"
+#include "menu.h"
+#include "nutrition.h"
 #include "users.h"
 #include "utils.h"
-#include "menu.h"
-
+#include "progress.h"
 
 
 // Function to draw the menu window layout
@@ -35,7 +38,7 @@ void draw_menu_window(WINDOW *win, char *menu_title, char *menu_options[],
   mvwaddch(win, 2, width + 4, ACS_RTEE); // Connect to right border
   wattroff(win, COLOR_PAIR(6));
 
-// Display the menu options
+  // Display the menu options
   wattron(win, COLOR_PAIR(1));
   for (int i = 0; i < menu_option_count; i++) {
     if (i == selected_option) {
@@ -68,10 +71,11 @@ void draw_menu_window(WINDOW *win, char *menu_title, char *menu_options[],
 
   wrefresh(win); // Refresh window to reflect changes
 }
+
 int menu_system() {
   char *menu_title = "MAIN MENU";
-  char *menu_options[] = {"1. Ask OllamaAI", "2. Fitness & Nutrition Tracker",
-                          "3. Quit"};
+  char *menu_options[] = {"1. Ask OllamaAI", "2. Nutrition Tracker",
+                          "3. Fitness", "4. Progress", "5. Quit"};
   int menu_option_count = sizeof(menu_options) / sizeof(menu_options[0]);
   int selected_option = 0;
 
@@ -102,7 +106,7 @@ int menu_system() {
   // Non-blocking input
   nodelay(win, TRUE); // Do not block input waiting for a keypress
 
-int ch;
+  int ch;
   while (1) {
     draw_menu_window(win, menu_title, menu_options, selected_option,
                      menu_option_count);
@@ -127,21 +131,37 @@ int ch;
         ai_draw_prompt();
         break;
       case 1:
-        // Fitness & Nutrition Tracker
-        mvwprintw(win, height - 2, 2, "Fitness Tracker selected...");
+        // Nutrition Tracker
+        mvwprintw(win, height - 2, 2, "Nutrition Tracker selected...");
         wrefresh(win);
-        sleep(3);  // Add sleep(3) here to wait before drawing users menu
-        draw_users_menu();
+        sleep(3); // Add sleep(3) here to wait before drawing users menu
+        display_nutrition_menu();
         wrefresh(win);
-        sleep(1);  
+        sleep(1);
         break;
       case 2:
+        // Fitness Tracker
+        mvwprintw(win, height - 2, 2, "Fitness Tracker selected...");
+        wrefresh(win);
+        sleep(3); // Add sleep(3) here to wait before drawing users menu
+        display_fitness_menu();
+        wrefresh(win);
+        sleep(1);
+        break;
+      case 3:
+        mvwprintw(win, height - 2, 2, "Progress selected...");
+        wrefresh(win);
+        sleep(3); // Add sleep(3) here to wait before drawing users menu
+        display_progress_menu(cal_consumed,cal_spent);
+        return 0;
+      case 4:
         // Quit
         delwin(win);
         endwin();
         exit(0);
         return 0;
       }
+
       break;
     default:
       break;

@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "users.h"
 #include "utils.h"
 #include <curses.h>
 #include <stdio.h>
@@ -64,7 +65,7 @@ void drawWindow(WINDOW *win) {
           ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
   wattroff(win, COLOR_PAIR(6));
 
-  // *WELCOME text centered at the top*
+  // **WELCOME text centered at the top**
   wattron(win, COLOR_PAIR(2));                   // Use red color for "WELCOME"
   mvwprintw(win, 1, (width / 2) - 3, "WELCOME"); // Position the text centrally
   wattroff(win, COLOR_PAIR(5));
@@ -92,7 +93,7 @@ void drawWindow(WINDOW *win) {
   // Display the current time in the window (on the right side)
   display_time(win, height, width);
 
-    // Display the vertical bar before the time with white color
+  // Display the vertical bar before the time with white color
   wattron(win, COLOR_PAIR(7)); // Assuming color pair 7 is white
   mvwprintw(win, height + 2 + OFFSET_Y, width - 19,
             "|"); // White vertical bar before time
@@ -133,8 +134,7 @@ void blink_message(WINDOW *win, int height, int width) {
     // Check for user input to stop blinking and continue
     int ch = wgetch(win);
     if (ch == '\n') {
-      
-      menu_system();
+      draw_users_menu();
     }
   }
 }

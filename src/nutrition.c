@@ -4,33 +4,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h> // for usleep()
 
+#include "calc.h"
 #include "fitness.h"
 #include "globals.h"
-#include "utils.h"
 #include "menu.h"
+#include "utils.h"
+#include <unistd.h> // for usleep() 
 
-#define MAX_FOOD_ITEMS 1000
-#define MAX_MATCHES 13
+#include "nutrition.h"
 
-// Define the structure for food items
-typedef struct {
-  char food[4000];
-  char serving[500];
-  float calories;
-} FoodItem;
+char consumedFoods[MAX_CONSUMED][50]; // Define the global variable
+int consumedCount = 0; // Initialize the count
 
 FoodItem foodItems[MAX_FOOD_ITEMS];
 int line_count = 0; // Global variable to keep track of food item count
 
 // Function to initialize food items from CSV file
 void initFoodItems() {
-    FILE *file = fopen("C:/Users/lomes/OneDrive/Desktop/Final/dataset/FoodandCalories.csv", "r");
-    if (file == NULL) {
-        printf("Error opening file\n");
-        return;
-    }
+  FILE *file = fopen(
+      "C:/Users/diyen/OneDrive/Desktop/Final/dataset/FoodandCalories.csv", "r");
+  if (file == NULL) {
+    printf("Error opening file\n");
+    return;
+  }
 
   char line[1024];
   int count = 0;
@@ -89,7 +86,7 @@ void drawLayout(WINDOW *win, int width) {
 
   // Header and separator
   wattron(win, COLOR_PAIR(2));
-  mvwprintw(win, 1, 42, "  Calorie Tracker  ");               
+  mvwprintw(win, 1, 42, "  Calorie Tracker  ");
   wattroff(win, COLOR_PAIR(4));
 
   wattron(win, COLOR_PAIR(6));
@@ -112,7 +109,6 @@ void drawLayout(WINDOW *win, int width) {
   mvwprintw(win, height + 2 + OFFSET_Y, width - 16,
             "|"); // White vertical bar before time
   wattroff(win, COLOR_PAIR(7));
-
 
   wattron(win, COLOR_PAIR(3)); // Submit button uses magenta
   mvwprintw(win, height + 2 + OFFSET_Y, 5,
@@ -156,8 +152,6 @@ void promptForFood(WINDOW *win, int width) {
   extern float finalCaloriesConsumed;
   int continueInput = 1;
 
-  char consumedFoods[100][50]; // Array to store the names of the consumed foods
-  int consumedCount = 0;       // Count of foods consumed
 
   echo();           // Enable typed character echoing
   int startRow = 5; // Row where food input starts
@@ -222,10 +216,9 @@ void promptForFood(WINDOW *win, int width) {
     } else if (matchCount == 1) {
       int idx = matchIndexes[0];
       wattron(win, COLOR_PAIR(5)); // Red for the food consumption message
-      mvwprintw(win, startRow + 1, 2,
-                "Consumed %s, %sCalories per serving: %.2f",
-                foodItems[idx].food, foodItems[idx].serving,
-                foodItems[idx].calories);
+      mvwprintw(
+          win, startRow + 1, 2, "Consumed %s, %sCalories per serving: %.2f",
+          foodItems[idx].food, foodItems[idx].serving, foodItems[idx].calories);
       // Redraw border after activity input
       wattron(win, COLOR_PAIR(6)); // Turn on blue color
       wborder(win, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, ACS_ULCORNER,
@@ -250,9 +243,9 @@ void promptForFood(WINDOW *win, int width) {
       totalCaloriesConsumed += totalCalories;
       wattron(win, COLOR_PAIR(6)); // Blue for total calories for this food
       mvwprintw(win, startRow + 3, 2,
-                "Total calories for this food/drink: %.2f Kcal", totalCalories);
+                "Total calories for this food/drink: %.2f cal", totalCalories);
       wattroff(win, COLOR_PAIR(6)); // Turn off blue color
-  
+
       // Store the consumed food name in the array
       strcpy(consumedFoods[consumedCount], foodItems[idx].food);
       consumedCount++;
@@ -264,7 +257,7 @@ void promptForFood(WINDOW *win, int width) {
               ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
       wattroff(win, COLOR_PAIR(6)); // Turn off blue color
       wrefresh(win);                // Refresh the window after activity input
-      sleep(5);                     // Wait 5 seconds
+      sleep(3);                     // Wait 5 seconds
     } else {
       int selectedIndex = 0;
       int choice = -1;
@@ -343,7 +336,7 @@ void promptForFood(WINDOW *win, int width) {
         totalCaloriesConsumed += totalCalories;
         wattron(win, COLOR_PAIR(6)); // Blue for total calories for this food
         mvwprintw(win, startRow + 5 + matchCount, 2,
-                  "Total calories for this food: %.2f Kcal", totalCalories);
+                  "Total calories for this food: %.2f cal", totalCalories);
         wattroff(win, COLOR_PAIR(6)); // Turn off blue color
 
         strcpy(consumedFoods[consumedCount], foodItems[idx].food);
@@ -355,13 +348,13 @@ void promptForFood(WINDOW *win, int width) {
                 ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
         wattroff(win, COLOR_PAIR(6)); // Turn off blue color
         wrefresh(win);                // Refresh the window after activity input
-        sleep(5);                     // Wait 5 seconds
+        sleep(3);                     // Wait 5 seconds
       }
     }
 
     wattron(win, COLOR_PAIR(3)); // Green for total calories consumed
     mvwprintw(win, 20 + OFFSET_Y, 2,
-              "Total calories consumed so far: %.2f Kcal",
+              "Total calories consumed so far: %.2f cal",
               totalCaloriesConsumed);
     wattroff(win, COLOR_PAIR(3)); // Turn off green color
     // Redraw border after activity input
@@ -375,11 +368,12 @@ void promptForFood(WINDOW *win, int width) {
   noecho(); // Disable character echoing after input
 
   finalCaloriesConsumed = totalCaloriesConsumed;
+  cal_consumed = finalCaloriesConsumed;
 
   // Display all the food that the user has consumed when "exit" is typed
   clearFoodEntry(win, startRow, endRow,
                  width);       // Clear the screen for the summary
-  wattron(win, COLOR_PAIR(5)); // Color for food list
+  wattron(win, COLOR_PAIR(2)); // Color for food list
   mvwprintw(win, startRow, 2, "You have eaten/drank the following items:");
 
   for (int i = 0; i < consumedCount; i++) {
@@ -393,9 +387,16 @@ void promptForFood(WINDOW *win, int width) {
           ACS_URCORNER, ACS_LLCORNER, ACS_LRCORNER);
   wattroff(win, COLOR_PAIR(6)); // Turn off blue color
   wrefresh(win);                // Refresh the window after activity input
+
+  int ch;
+    while (1) {
+        ch = wgetch(win);
+        if (ch == 'q' || ch == 27) { // Press 'q' or 'Esc' to return to menu
+            break;
+        }
+    }
   
-  sleep(5);
-  display_fitness_menu();
+  menu_system();
 
   // No exit or auto-close; leave the window open indefinitely for the user to
   // close manually
@@ -444,11 +445,10 @@ int display_nutrition_menu() {
 
     display_time(win, height, width);
 
-    usleep(1000000);      // Sleep for 1 second
     int ch = wgetch(win); // Non-blocking input
-    if (ch == 'q')        // Press 'q' to exit
+    if (ch == 'q' || ch == 27) // Press 'q' or 'Esc' (ASCII 27) to exit
       break;
-  }
+}
 
   // End ncurses mode
   delwin(win);
